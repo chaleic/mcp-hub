@@ -317,7 +317,9 @@ const loadServers = async () => {
   try {
     loading.value = true
     const response = await api.getServers()
-    servers.value = response.servers.map(server => ({
+    // Convert servers object to array format
+    servers.value = Object.entries(response.servers || {}).map(([name, server]) => ({
+      name,
       ...server,
       loading: false,
       refreshing: false

@@ -119,6 +119,13 @@ class ApiService {
     })
   }
 
+  async installMarketplaceServer(mcpId, serverName) {
+    return this.request('/marketplace/install', {
+      method: 'POST',
+      body: JSON.stringify({ mcpId, serverName })
+    })
+  }
+
   // Workspaces
   async getWorkspaces() {
     return this.request('/workspaces')

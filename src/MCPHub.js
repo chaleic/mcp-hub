@@ -328,9 +328,29 @@ export class MCPHub extends EventEmitter {
   }
 
   getAllServerStatuses() {
-    return Array.from(this.connections.values()).map((connection) =>
-      connection.getServerInfo()
+    return Object.fromEntries(
+      Array.from(this.connections.keys()).map((name) => [name, this.getServerStatus(name)])
     );
+  }
+
+  getConfig() {
+    return this.configManager.getConfig();
+  }
+
+  async updateConfiguration(newConfig) {
+    try {
+      await this.configManager.updateConfig(newConfig);
+      logger.info("Configuration updated successfully");
+      
+      // Restart all servers with the new configuration
+      await this.startConfiguredServers();
+      
+      return { success: true };
+    } catch (error) {
+      throw wrapError(error, "CONFIG_UPDATE_ERROR", {
+        operation: "update_configuration",
+      });
+    }
   }
 
   async rawRequest(serverName, ...rest) {
