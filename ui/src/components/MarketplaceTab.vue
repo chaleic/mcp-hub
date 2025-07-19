@@ -340,21 +340,53 @@ const installServer = async (server) => {
   server.installing = true
   
   try {
-    // This would typically involve calling an install endpoint
-    // For now, we'll just show a success message
-    await new Promise(resolve => setTimeout(resolve, 2000)) // Simulate installation
+    // Prompt user for server name
+    const serverName = prompt(`Enter a name for this server:`, server.name.replace(/[@\/]/g, '-'))
+    
+    if (!serverName) {
+      toast.add({
+        severity: 'info',
+        summary: 'Cancelled',
+        detail: 'Installation cancelled',
+        life: 3000
+      })
+      return
+    }
+    
+    // Check if server name already exists
+    const existingServers = await api.getServers()
+    if (existingServers.servers && Object.keys(existingServers.servers).includes(serverName)) {
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: `Server name "${serverName}" already exists`,
+        life: 5000
+      })
+      return
+    }
+    
+    // Install the server
+    await api.installMarketplaceServer(server.id, serverName)
     
     toast.add({
       severity: 'success',
       summary: 'Success',
-      detail: `Server ${server.name} installed successfully`,
+      detail: `Server "${serverName}" installed successfully`,
       life: 3000
     })
+    
+    // Refresh the servers list to show the new server
+    setTimeout(() => {
+      // Emit event to refresh servers (if parent component listens)
+      // or navigate to servers tab
+    }, 1000)
+    
   } catch (error) {
+    console.error('Installation failed:', error)
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.message,
+      summary: 'Installation Failed',
+      detail: error.message || 'Failed to install server',
       life: 5000
     })
   } finally {

@@ -422,6 +422,95 @@ registerRoute(
   }
 );
 
+// Register marketplace install endpoint
+registerRoute(
+  "POST",
+  "/marketplace/install",
+  "Install a server from the marketplace",
+  async (req, res) => {
+    const { mcpId, serverName } = req.body;
+    try {
+      if (!mcpId) {
+        throw new ValidationError("Missing mcpId in request body");
+      }
+      if (!serverName) {
+        throw new ValidationError("Missing serverName in request body");
+      }
+
+      // Get server details from marketplace
+      const serverDetails = await marketplace.getServerDetails(mcpId);
+      if (!serverDetails) {
+        throw new ValidationError("Server not found in marketplace", { mcpId });
+      }
+
+      // Get current configuration
+      const currentConfig = serviceManager.mcpHub.getConfig();
+      
+      // Extract the actual server data
+      const server = serverDetails.server;
+      
+      // Create server configuration from marketplace data
+      // Most marketplace servers are npm packages that can be run with npx
+      const serverConfig = {
+        command: "npx",
+        args: [server.name],
+        env: {},
+        description: server.description,
+        homepage: server.url,
+        config_source: "marketplace"
+      };
+
+      // Validate the server configuration before adding it
+      logger.debug(`Installing marketplace server '${serverName}' with config:`, serverConfig);
+
+      // Ensure we don't accidentally create mixed STDIO/SSE configurations
+      if (serverConfig.command && serverConfig.url) {
+        logger.error("MARKETPLACE_INSTALL_ERROR", `Invalid server configuration: cannot have both command and url fields`, {
+          serverName,
+          serverConfig
+        });
+        throw new ValidationError("Invalid server configuration generated from marketplace data");
+      }
+
+      // Add server to configuration
+      const updatedConfig = {
+        ...currentConfig,
+        mcpServers: {
+          ...currentConfig.mcpServers,
+          [serverName]: serverConfig
+        }
+      };
+
+      logger.debug(`Updated configuration for marketplace install:`, {
+        serverName,
+        serverConfig,
+        totalServers: Object.keys(updatedConfig.mcpServers).length
+      });
+
+      // Update the configuration
+      await serviceManager.mcpHub.updateConfiguration(updatedConfig);
+
+      res.json({
+        status: "success",
+        message: `Server ${serverName} installed successfully`,
+        server: serverConfig,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      throw wrapError(error, "MARKETPLACE_INSTALL_ERROR", {
+        mcpId: req.body.mcpId,
+        serverName: req.body.serverName,
+      });
+    } finally {
+      serviceManager.broadcastSubscriptionEvent(SubscriptionTypes.SERVERS_UPDATED, {
+        changes: {
+          added: [req.body.serverName],
+        }
+      })
+    }
+  }
+);
+
 // Register workspaces endpoint
 registerRoute(
   "GET",
