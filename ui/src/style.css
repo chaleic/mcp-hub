@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+/* Force proper button styling with high specificity */
+.p-button,
+.p-button.p-component {
+  /* Ensure buttons don't get squeezed in flex containers */
+  flex-shrink: 0 !important;
+  /* Add proper padding for better button width */
+  padding: 0.5rem 1rem !important;
+  min-width: fit-content !important;
+  white-space: nowrap !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.p-button-sm,
+.p-button.p-button-sm.p-component {
+  /* Smaller buttons need appropriate padding */
+  padding: 0.375rem 1rem !important;
+  font-size: 0.875rem !important;
+}
+
+.p-button-icon-only,
+.p-button.p-button-icon-only.p-component {
+  /* Icon-only buttons should be square */
+  padding: 0.5rem !important;
+  min-width: auto !important;
+  width: auto !important;
+}
+
+.p-button-sm.p-button-icon-only,
+.p-button.p-button-sm.p-button-icon-only.p-component {
+  /* Small icon-only buttons */
+  padding: 0.375rem !important;
+}
+
+/* Ensure buttons work in flex containers */
+.flex .p-button,
+.space-x-3 .p-button,
+.space-x-2 .p-button {
+  flex-shrink: 0 !important;
+}
+
+/* Other PrimeVue components */
+.p-datatable {
+  @apply w-full;
+}
+
+.p-dialog {
+  @apply z-50;
+}
+
+.p-toast {
+  @apply z-50;
+}
+
+.p-confirm-dialog {
+  @apply z-50;
+}
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-lg shadow-sm border border-gray-200;
+  }
+  
+  .btn-primary {
+    @apply bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg transition-colors;
+  }
+  
+  .btn-danger {
+    @apply bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors;
+  }
+  
+  .status-connected {
+    @apply text-green-600 bg-green-100 px-2 py-1 rounded-full text-xs font-medium;
+  }
+  
+  .status-disconnected {
+    @apply text-red-600 bg-red-100 px-2 py-1 rounded-full text-xs font-medium;
+  }
+  
+  .status-error {
+    @apply text-orange-600 bg-orange-100 px-2 py-1 rounded-full text-xs font-medium;
+  }
+} 
