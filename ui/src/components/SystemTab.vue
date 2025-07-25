@@ -199,6 +199,111 @@
       </div>
     </div>
 
+    <!-- Environment Variables -->
+    <div class="card p-6">
+      <div class="flex justify-between items-center mb-4">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Environment Variables</h3>
+          <p class="text-sm text-gray-600">Edit and manage .env file variables</p>
+        </div>
+        <div class="flex space-x-3">
+          <Button 
+            icon="pi pi-refresh" 
+            @click="loadEnvVars"
+            :loading="envLoading"
+            class="p-button-sm p-button-secondary"
+          >
+            Reload
+          </Button>
+          <Button 
+            icon="pi pi-save" 
+            @click="saveEnvVars"
+            :loading="envSaving"
+            :disabled="!envModified"
+            class="p-button-sm p-button-success"
+          >
+            Save Changes
+          </Button>
+        </div>
+      </div>
+
+      <div v-if="envData.filePath" class="mb-4">
+        <div class="flex items-center space-x-2 text-sm text-gray-600">
+          <i class="pi pi-file"></i>
+          <span>{{ envData.filePath }}</span>
+          <span v-if="envData.exists === false" class="text-orange-600">(file will be created)</span>
+        </div>
+      </div>
+
+      <!-- Environment Variables Table -->
+      <div class="space-y-4">
+        <div v-if="Object.keys(envVariables).length === 0 && !envLoading" class="text-center py-8">
+          <i class="pi pi-info-circle text-4xl text-gray-400 mb-4"></i>
+          <p class="text-gray-600">No environment variables found</p>
+          <Button 
+            icon="pi pi-plus" 
+            @click="addEnvVar"
+            class="p-button-sm mt-4"
+          >
+            Add First Variable
+          </Button>
+        </div>
+
+        <div v-else>
+          <div class="grid grid-cols-1 gap-3">
+            <div 
+              v-for="(value, key) in envVariables" 
+              :key="key"
+              class="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg bg-gray-50"
+            >
+              <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 mb-1">Variable Name</label>
+                  <InputText 
+                    v-model="envVariables[key]._key"
+                    @input="markEnvModified"
+                    placeholder="VARIABLE_NAME"
+                    class="w-full"
+                    size="small"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 mb-1">Value</label>
+                  <InputText 
+                    v-model="envVariables[key]._value"
+                    @input="markEnvModified"
+                    placeholder="variable value"
+                    class="w-full"
+                    size="small"
+                  />
+                </div>
+              </div>
+              <Button 
+                icon="pi pi-trash" 
+                @click="removeEnvVar(key)"
+                class="p-button-sm p-button-danger p-button-outlined"
+                size="small"
+              />
+            </div>
+          </div>
+
+          <div class="flex justify-between items-center mt-4">
+            <Button 
+              icon="pi pi-plus" 
+              @click="addEnvVar"
+              class="p-button-sm p-button-outlined"
+            >
+              Add Variable
+            </Button>
+            <div v-if="envModified" class="text-sm text-orange-600 flex items-center">
+              <i class="pi pi-exclamation-triangle mr-1"></i>
+              Unsaved changes
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Loading State -->
     <div v-if="loading" class="text-center py-12">
       <ProgressSpinner />
@@ -215,6 +320,7 @@ import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import ProgressSpinner from 'primevue/progressspinner'
+import InputText from 'primevue/inputtext'
 
 import api from '../services/api.js'
 
@@ -225,6 +331,14 @@ const health = ref({})
 const loading = ref(false)
 const refreshing = ref(false)
 const restarting = ref(false)
+
+// Environment variables state
+const envData = ref({})
+const envVariables = ref({})
+const envLoading = ref(false)
+const envSaving = ref(false)
+const envModified = ref(false)
+let envCounter = 0
 
 const getStatusClass = (status) => {
   switch (status?.toLowerCase()) {
@@ -346,7 +460,93 @@ const exportConfig = () => {
   })
 }
 
+// Environment variables methods
+const loadEnvVars = async () => {
+  try {
+    envLoading.value = true
+    const response = await api.getEnvVars()
+    envData.value = response
+    
+    // Convert to editable format
+    const vars = {}
+    Object.entries(response.envVars || {}).forEach(([key, value]) => {
+      const id = `env_${envCounter++}`
+      vars[id] = {
+        _key: key,
+        _value: value
+      }
+    })
+    
+    envVariables.value = vars
+    envModified.value = false
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: `Failed to load environment variables: ${error.message}`,
+      life: 5000
+    })
+  } finally {
+    envLoading.value = false
+  }
+}
+
+const saveEnvVars = async () => {
+  try {
+    envSaving.value = true
+    
+    // Convert back to simple key-value format
+    const envVars = {}
+    Object.values(envVariables.value).forEach(item => {
+      if (item._key && item._key.trim()) {
+        envVars[item._key.trim()] = item._value || ''
+      }
+    })
+    
+    await api.saveEnvVars(envVars)
+    envModified.value = false
+    
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: 'Environment variables saved successfully',
+      life: 3000
+    })
+    
+    // Reload to get updated file info
+    await loadEnvVars()
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: `Failed to save environment variables: ${error.message}`,
+      life: 5000
+    })
+  } finally {
+    envSaving.value = false
+  }
+}
+
+const addEnvVar = () => {
+  const id = `env_${envCounter++}`
+  envVariables.value[id] = {
+    _key: '',
+    _value: ''
+  }
+  markEnvModified()
+}
+
+const removeEnvVar = (id) => {
+  delete envVariables.value[id]
+  markEnvModified()
+}
+
+const markEnvModified = () => {
+  envModified.value = true
+}
+
 onMounted(() => {
   loadHealth()
+  loadEnvVars()
 })
 </script> 

@@ -142,6 +142,18 @@ class ApiService {
     })
   }
 
+  // Environment Variables
+  async getEnvVars() {
+    return this.request('/env')
+  }
+
+  async saveEnvVars(envVars) {
+    return this.request('/env', {
+      method: 'POST',
+      body: JSON.stringify({ envVars })
+    })
+  }
+
   // SSE Events
   createEventSource() {
     return new EventSource(`${API_BASE}/events`)

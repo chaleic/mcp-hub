@@ -16,12 +16,26 @@ import {
 import { getMarketplace } from "./marketplace.js";
 import { MCPServerEndpoint } from "./mcp/server.js";
 import { WorkspaceCacheManager } from "./utils/workspace-cache.js";
+import fs, { existsSync } from 'fs';
+import { promises as fsPromises } from 'fs';
+import path from 'path';
+import * as envfile from 'envfile';
 
 const SERVER_ID = "mcp-hub";
 
 // Create Express app
 const app = express();
 app.use(express.json());
+
+// Serve static UI files in production
+const uiPath = path.join(process.cwd(), 'dist/ui');
+if (existsSync(uiPath)) {
+  app.use(express.static(uiPath));
+  console.log(`Serving UI from ${uiPath}`);
+} else {
+  console.log(`UI build not found at ${uiPath}, running in development mode`);
+}
+
 app.use("/api", router);
 
 // Helper to determine HTTP status code from error type
@@ -531,6 +545,108 @@ registerRoute(
   }
 );
 
+// Helper functions for .env file management using envfile package
+function parseEnvFile(content) {
+  try {
+    return envfile.parse(content);
+  } catch (error) {
+    logger.warn(`Failed to parse .env file content: ${error.message}`);
+    return {};
+  }
+}
+
+function formatEnvFile(envVars) {
+  try {
+    return envfile.stringify(envVars);
+  } catch (error) {
+    logger.warn(`Failed to format .env file content: ${error.message}`);
+    return '';
+  }
+}
+
+// Register .env file endpoints
+registerRoute(
+  "GET",
+  "/env",
+  "Get environment variables from .env file",
+  async (req, res) => {
+    try {
+      const envPath = path.join(process.cwd(), '.env');
+      
+      try {
+        const content = await fsPromises.readFile(envPath, 'utf8');
+        const envVars = parseEnvFile(content);
+        
+        res.json({
+          status: "ok",
+          envVars,
+          filePath: envPath,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error) {
+        if (error.code === 'ENOENT') {
+          // File doesn't exist, return empty
+          res.json({
+            status: "ok",
+            envVars: {},
+            filePath: envPath,
+            exists: false,
+            timestamp: new Date().toISOString(),
+          });
+        } else {
+          throw error;
+        }
+      }
+    } catch (error) {
+      throw wrapError(error, "ENV_READ_ERROR", {
+        operation: "read_env_file",
+      });
+    }
+  }
+);
+
+registerRoute(
+  "POST",
+  "/env",
+  "Save environment variables to .env file",
+  async (req, res) => {
+    try {
+      const { envVars } = req.body;
+      
+      if (!envVars || typeof envVars !== 'object') {
+        throw new ValidationError("Missing or invalid envVars in request body");
+      }
+      
+      const envPath = path.join(process.cwd(), '.env');
+      const content = formatEnvFile(envVars);
+      
+      // Create backup if file exists
+      try {
+        await fsPromises.access(envPath);
+        const backupPath = `${envPath}.backup.${Date.now()}`;
+        await fsPromises.copyFile(envPath, backupPath);
+        logger.info(`Created backup of .env file at ${backupPath}`);
+      } catch (error) {
+        // File doesn't exist, no backup needed
+      }
+      
+      await fsPromises.writeFile(envPath, content, 'utf8');
+      
+      res.json({
+        status: "ok",
+        message: "Environment variables saved successfully",
+        filePath: envPath,
+        variableCount: Object.keys(envVars).length,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      throw wrapError(error, "ENV_WRITE_ERROR", {
+        operation: "write_env_file",
+      });
+    }
+  }
+);
+
 // Register server start endpoint
 registerRoute(
   "POST",
@@ -990,6 +1106,21 @@ registerRoute(
 );
 
 
+
+// SPA fallback - serve index.html for non-API routes
+app.get('*', (req, res, next) => {
+  // Skip API routes and MCP endpoints
+  if (req.path.startsWith('/api') || req.path.startsWith('/mcp') || req.path.startsWith('/messages')) {
+    return next();
+  }
+  
+  const indexPath = path.join(process.cwd(), 'dist/ui/index.html');
+  if (existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).send('UI not built. Run "npm run build:ui" first.');
+  }
+});
 
 // Error handler middleware
 router.use((err, req, res, next) => {
