@@ -304,7 +304,7 @@ const loadServers = async () => {
     // Collect all resources from all servers
     const allResources = []
     servers.value.forEach(server => {
-      if (server.capabilities?.resources) {
+      if (server.capabilities?.resources && Array.isArray(server.capabilities.resources)) {
         server.capabilities.resources.forEach(resource => {
           allResources.push({
             ...resource,
