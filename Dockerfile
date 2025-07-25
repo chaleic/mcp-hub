@@ -9,6 +9,7 @@ COPY package*.json ./
 RUN npm ci
 COPY . ./
 RUN npm run build
+RUN npm run build:ui
 
 # Runtime stage
 FROM node:18-alpine
