@@ -7,7 +7,7 @@ import { ConfigError, wrapError } from "./errors.js";
 import deepEqual from "fast-deep-equal";
 export class ConfigManager extends EventEmitter {
   // Key fields to compare for server config changes
-  #KEY_FIELDS = ['command', 'args', 'env', 'disabled', 'url', 'headers', 'dev', 'name', 'cwd', 'config_source'];
+  #KEY_FIELDS = ['command', 'args', 'env', 'disabled', 'url', 'headers', 'dev', 'name', 'cwd', 'config_source', 'homepage'];
   #previousConfig = null;
   #watcher = null;
 
@@ -96,9 +96,27 @@ export class ConfigManager extends EventEmitter {
       this.configPaths = newConfigOrPath;
       await this.loadConfig();
     } else if (newConfigOrPath && typeof newConfigOrPath === "object") {
-      // Update config directly with deep clone for previousConfig
+      // Update config directly and save to file if we have file paths
       this.config = newConfigOrPath;
       this.#previousConfig = JSON.parse(JSON.stringify(newConfigOrPath));
+      
+      // Save to the first config file if we have config paths
+      if (this.configPaths && this.configPaths.length > 0) {
+        try {
+          await fs.writeFile(
+            this.configPaths[0], 
+            JSON.stringify(newConfigOrPath, null, 2), 
+            'utf-8'
+          );
+          logger.debug(`Config saved to ${this.configPaths[0]}`);
+        } catch (error) {
+          logger.error("CONFIG_SAVE_ERROR", `Failed to save config to ${this.configPaths[0]}: ${error.message}`, {
+            configPath: this.configPaths[0],
+            error: error.message
+          });
+          throw new ConfigError(`Failed to save config: ${error.message}`);
+        }
+      }
     }
   }
 
@@ -152,7 +170,7 @@ export class ConfigManager extends EventEmitter {
         const hasStdioFields = server.command !== undefined;
         const hasSseFields = server.url !== undefined;
 
-        // Check for mixed fields
+        // Check for mixed fields (but ignore homepage field as it's for documentation)
         if (hasStdioFields && hasSseFields) {
           throw new ConfigError(
             `Server '${name}' cannot mix stdio and sse fields`,
@@ -190,6 +208,14 @@ export class ConfigManager extends EventEmitter {
           try {
             new URL(server.url); // Validate URL format
           } catch (error) {
+            logger.error("CONFIG_VALIDATION_ERROR", `Server '${name}' has invalid url '${server.url}': ${error.message}`, {
+              server: name,
+              url: server.url,
+              serverConfig: server,
+              hasStdioFields,
+              hasSseFields,
+              allFields: Object.keys(server)
+            });
             throw new ConfigError(`Server '${name}' has invalid url`, {
               server: name,
               url: server.url,
@@ -207,6 +233,13 @@ export class ConfigManager extends EventEmitter {
           }
           server.type = "sse"; // Add type for internal use
         } else {
+          logger.error("CONFIG_VALIDATION_ERROR", `Server '${name}' configuration is invalid - missing both command and url fields`, {
+            server: name,
+            serverConfig: server,
+            hasStdioFields,
+            hasSseFields,
+            allFields: Object.keys(server)
+          });
           throw new ConfigError(
             `Server '${name}' must include either command (for stdio) or url (for sse)`,
             {
@@ -214,6 +247,16 @@ export class ConfigManager extends EventEmitter {
               config: server,
             }
           );
+        }
+
+        // Validate homepage field if present (optional documentation field)
+        if (server.homepage && typeof server.homepage === 'string') {
+          try {
+            new URL(server.homepage); // Validate URL format but don't throw on failure
+          } catch (error) {
+            logger.warn(`Server '${name}' has invalid homepage URL: ${server.homepage}`);
+            // Don't throw error for invalid homepage as it's optional
+          }
         }
 
         // Validate dev field (only for stdio servers)
