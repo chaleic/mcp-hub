@@ -167,7 +167,7 @@
           <h4 class="font-medium text-gray-900">Capabilities</h4>
           
           <!-- Tools -->
-          <div v-if="selectedServer.capabilities?.tools?.length">
+          <div v-if="selectedServer.capabilities?.tools?.length && Array.isArray(selectedServer.capabilities.tools)">
             <h5 class="text-sm font-medium text-gray-700 mb-2">Tools ({{ selectedServer.capabilities.tools.length }})</h5>
             <div class="bg-gray-50 p-3 rounded max-h-32 overflow-y-auto">
               <div 
@@ -182,7 +182,7 @@
           </div>
 
           <!-- Resources -->
-          <div v-if="selectedServer.capabilities?.resources?.length">
+          <div v-if="selectedServer.capabilities?.resources?.length && Array.isArray(selectedServer.capabilities.resources)">
             <h5 class="text-sm font-medium text-gray-700 mb-2">Resources ({{ selectedServer.capabilities.resources.length }})</h5>
             <div class="bg-gray-50 p-3 rounded max-h-32 overflow-y-auto">
               <div 
@@ -197,7 +197,7 @@
           </div>
 
           <!-- Prompts -->
-          <div v-if="selectedServer.capabilities?.prompts?.length">
+          <div v-if="selectedServer.capabilities?.prompts?.length && Array.isArray(selectedServer.capabilities.prompts)">
             <h5 class="text-sm font-medium text-gray-700 mb-2">Prompts ({{ selectedServer.capabilities.prompts.length }})</h5>
             <div class="bg-gray-50 p-3 rounded max-h-32 overflow-y-auto">
               <div 
@@ -337,7 +337,7 @@ const loadServers = async () => {
 }
 
 const startServer = async (serverName) => {
-  const server = servers.value.find(s => s.name === serverName)
+  const server = Array.isArray(servers.value) ? servers.value.find(s => s.name === serverName) : null
   if (!server) return
   
   try {
@@ -363,7 +363,7 @@ const startServer = async (serverName) => {
 }
 
 const stopServer = async (serverName) => {
-  const server = servers.value.find(s => s.name === serverName)
+  const server = Array.isArray(servers.value) ? servers.value.find(s => s.name === serverName) : null
   if (!server) return
   
   confirm.require({
@@ -396,7 +396,7 @@ const stopServer = async (serverName) => {
 }
 
 const refreshServer = async (serverName) => {
-  const server = servers.value.find(s => s.name === serverName)
+  const server = Array.isArray(servers.value) ? servers.value.find(s => s.name === serverName) : null
   if (!server) return
   
   try {

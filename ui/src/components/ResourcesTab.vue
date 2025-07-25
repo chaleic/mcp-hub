@@ -237,10 +237,10 @@ const resourceContent = ref(null)
 
 const serverOptions = computed(() => [
   { label: 'All Servers', value: null },
-  ...servers.value.map(server => ({
+  ...(Array.isArray(servers.value) ? servers.value.map(server => ({
     label: server.name,
     value: server.name
-  }))
+  })) : [])
 ])
 
 const statusOptions = [
@@ -251,6 +251,7 @@ const statusOptions = [
 ]
 
 const filteredResources = computed(() => {
+  if (!Array.isArray(resources.value)) return []
   return resources.value.filter(resource => {
     // Server filter
     if (selectedServer.value && resource.server !== selectedServer.value) {
@@ -299,11 +300,12 @@ const loadServers = async () => {
   try {
     loading.value = true
     const response = await api.getServers()
-    servers.value = response.servers || []
+    const serverList = Object.values(response.servers || {})
+    servers.value = serverList
     
     // Collect all resources from all servers
     const allResources = []
-    servers.value.forEach(server => {
+    serverList.forEach(server => {
       if (server.capabilities?.resources && Array.isArray(server.capabilities.resources)) {
         server.capabilities.resources.forEach(resource => {
           allResources.push({
