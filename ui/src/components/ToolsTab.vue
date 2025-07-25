@@ -317,7 +317,7 @@ const loadServers = async () => {
     // Collect all tools from all servers
     const allTools = []
     servers.value.forEach(server => {
-      if (server.capabilities?.tools) {
+      if (server.capabilities?.tools && Array.isArray(server.capabilities.tools)) {
         server.capabilities.tools.forEach(tool => {
           allTools.push({
             ...tool,
