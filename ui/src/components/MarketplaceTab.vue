@@ -100,15 +100,15 @@
         </div>
 
         <!-- Tags -->
-        <div v-if="server.tags?.length" class="flex flex-wrap gap-1">
+        <div v-if="server.tags?.length && Array.isArray(server.tags)" class="flex flex-wrap gap-1">
           <span 
-            v-for="tag in server.tags.slice(0, 3)" 
+            v-for="tag in (Array.isArray(server.tags) ? server.tags.slice(0, 3) : [])" 
             :key="tag"
             class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
           >
             {{ tag }}
           </span>
-          <span v-if="server.tags.length > 3" class="px-2 py-1 text-gray-500 text-xs">
+          <span v-if="Array.isArray(server.tags) && server.tags.length > 3" class="px-2 py-1 text-gray-500 text-xs">
             +{{ server.tags.length - 3 }} more
           </span>
         </div>
@@ -184,7 +184,7 @@
         </div>
 
         <!-- Tags -->
-        <div v-if="selectedServer.tags?.length">
+        <div v-if="selectedServer.tags?.length && Array.isArray(selectedServer.tags)">
           <label class="block text-sm font-medium text-gray-700 mb-1">Tags</label>
           <div class="flex flex-wrap gap-2">
             <span 
@@ -206,7 +206,7 @@
         </div>
 
         <!-- Installation Info -->
-        <div v-if="selectedServer.installations?.length">
+        <div v-if="selectedServer.installations?.length && Array.isArray(selectedServer.installations)">
           <label class="block text-sm font-medium text-gray-700 mb-1">Installation</label>
           <div class="bg-gray-50 p-4 rounded">
             <div 

@@ -174,7 +174,7 @@
         <div v-if="executionResult" class="space-y-2">
           <h4 class="font-medium text-gray-900">Result</h4>
           <div class="bg-gray-50 p-4 rounded max-h-64 overflow-y-auto">
-            <div v-for="(message, index) in executionResult.messages" :key="index" class="mb-4">
+            <div v-for="(message, index) in (Array.isArray(executionResult.messages) ? executionResult.messages : [])" :key="index" class="mb-4">
               <div class="font-medium text-sm text-gray-700 mb-1">{{ message.role }}</div>
               <div v-if="message.content.type === 'text'" class="text-sm text-gray-600">
                 {{ message.content.text }}
@@ -272,10 +272,10 @@ const executing = ref(false)
 
 const serverOptions = computed(() => [
   { label: 'All Servers', value: null },
-  ...servers.value.map(server => ({
+  ...(Array.isArray(servers.value) ? servers.value.map(server => ({
     label: server.name,
     value: server.name
-  }))
+  })) : [])
 ])
 
 const statusOptions = [
@@ -286,6 +286,7 @@ const statusOptions = [
 ]
 
 const filteredPrompts = computed(() => {
+  if (!Array.isArray(prompts.value)) return []
   return prompts.value.filter(prompt => {
     // Server filter
     if (selectedServer.value && prompt.server !== selectedServer.value) {
@@ -324,11 +325,12 @@ const loadServers = async () => {
   try {
     loading.value = true
     const response = await api.getServers()
-    servers.value = response.servers || []
+    const serverList = Object.values(response.servers || {})
+    servers.value = serverList
     
     // Collect all prompts from all servers
     const allPrompts = []
-    servers.value.forEach(server => {
+    serverList.forEach(server => {
       if (server.capabilities?.prompts && Array.isArray(server.capabilities.prompts)) {
         server.capabilities.prompts.forEach(prompt => {
           allPrompts.push({

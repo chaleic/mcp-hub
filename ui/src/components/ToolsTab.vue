@@ -260,10 +260,10 @@ const executing = ref(false)
 
 const serverOptions = computed(() => [
   { label: 'All Servers', value: null },
-  ...servers.value.map(server => ({
+  ...(Array.isArray(servers.value) ? servers.value.map(server => ({
     label: server.name,
     value: server.name
-  }))
+  })) : [])
 ])
 
 const statusOptions = [
@@ -274,6 +274,7 @@ const statusOptions = [
 ]
 
 const filteredTools = computed(() => {
+  if (!Array.isArray(tools.value)) return []
   return tools.value.filter(tool => {
     // Server filter
     if (selectedServer.value && tool.server !== selectedServer.value) {
@@ -312,11 +313,12 @@ const loadServers = async () => {
   try {
     loading.value = true
     const response = await api.getServers()
-    servers.value = response.servers || []
+    const serverList = Object.values(response.servers || {})
+    servers.value = serverList
     
     // Collect all tools from all servers
     const allTools = []
-    servers.value.forEach(server => {
+    serverList.forEach(server => {
       if (server.capabilities?.tools && Array.isArray(server.capabilities.tools)) {
         server.capabilities.tools.forEach(tool => {
           allTools.push({
