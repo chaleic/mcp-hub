@@ -329,7 +329,7 @@ const loadServers = async () => {
     // Collect all prompts from all servers
     const allPrompts = []
     servers.value.forEach(server => {
-      if (server.capabilities?.prompts) {
+      if (server.capabilities?.prompts && Array.isArray(server.capabilities.prompts)) {
         server.capabilities.prompts.forEach(prompt => {
           allPrompts.push({
             ...prompt,
