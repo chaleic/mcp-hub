@@ -312,7 +312,7 @@ const loadServers = async () => {
   try {
     loading.value = true
     const response = await api.getServers()
-    servers.value = response.servers
+    servers.value = response.servers || []
     
     // Collect all tools from all servers
     const allTools = []

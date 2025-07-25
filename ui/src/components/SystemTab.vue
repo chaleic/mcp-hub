@@ -48,7 +48,7 @@
         <div class="space-y-2 text-sm">
           <div class="flex justify-between">
             <span class="text-gray-600">Total Servers:</span>
-            <span class="font-medium">{{ health.servers?.length || 0 }}</span>
+            <span class="font-medium">{{ getServersArray().length }}</span>
           </div>
           <div class="flex justify-between">
             <span class="text-gray-600">Connected:</span>
@@ -130,7 +130,7 @@
     <div class="card p-6">
       <h3 class="text-lg font-semibold text-gray-900 mb-4">Server Details</h3>
       <DataTable 
-        :value="health.servers || []" 
+        :value="getServersArray()" 
         :paginator="true" 
         :rows="10"
         :rowsPerPageOptions="[5, 10, 20]"
@@ -373,11 +373,26 @@ const formatUptime = (uptime) => {
 }
 
 const getConnectedServers = () => {
-  return health.value.servers?.filter(s => s.status === 'connected').length || 0
+  if (!health.value.servers) return 0
+  const serversArray = Array.isArray(health.value.servers) 
+    ? health.value.servers 
+    : Object.values(health.value.servers)
+  return serversArray.filter(s => s.status === 'connected').length || 0
 }
 
 const getDisconnectedServers = () => {
-  return health.value.servers?.filter(s => s.status === 'disconnected').length || 0
+  if (!health.value.servers) return 0
+  const serversArray = Array.isArray(health.value.servers) 
+    ? health.value.servers 
+    : Object.values(health.value.servers)
+  return serversArray.filter(s => s.status === 'disconnected').length || 0
+}
+
+const getServersArray = () => {
+  if (!health.value.servers) return []
+  return Array.isArray(health.value.servers) 
+    ? health.value.servers 
+    : Object.values(health.value.servers)
 }
 
 const loadHealth = async () => {
