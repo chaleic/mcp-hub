@@ -299,7 +299,7 @@ const loadServers = async () => {
   try {
     loading.value = true
     const response = await api.getServers()
-    servers.value = response.servers
+    servers.value = response.servers || []
     
     // Collect all resources from all servers
     const allResources = []

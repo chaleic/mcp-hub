@@ -307,7 +307,7 @@ const loadMarketplace = async () => {
   try {
     loading.value = true
     const response = await api.getMarketplace(filters.value)
-    marketplaceServers.value = response.servers.map(server => ({
+    marketplaceServers.value = (response.servers || []).map(server => ({
       ...server,
       installing: false
     }))
